@@ -7,19 +7,20 @@
  *   D3: Dah Paddle (active LOW, internal pull-up)
  *   D4: Audio Sidetone Out (700 Hz square wave)
  *   D13: Onboard LED (flashes with tone)
- *   A0: Speed Potentiometer Wiper (outer legs to 5V and GND)
+ *   A7: Speed Potentiometer Wiper (outer legs to 3V3 and GND)
  */
 
 const int PIN_DIT   = 2;
 const int PIN_DAH   = 3;
 const int PIN_AUDIO = 4;
 const int PIN_LED   = LED_BUILTIN;
-const int PIN_SPEED = A0;
+const int PIN_SPEED = A7;
 
 const int SIDETONE_FREQ = 700;
 
 const int MIN_WPM = 6;
 const int MAX_WPM = 35;
+const int POT_MAX_ADC = 675; // Expected ADC max when pot is powered by 3.3V (3.3V / 5.0V * 1023)
 
 // Debounce / Lockout timing
 const unsigned long LOCKOUT_MS = 8;
@@ -79,7 +80,19 @@ char decodeMorse(const String& code) {
 
 int getDitLength() {
   int potVal = analogRead(PIN_SPEED);
-  int wpm = map(potVal, 0, 1023, MIN_WPM, MAX_WPM);
+  int clampedPot = constrain(potVal, 0, POT_MAX_ADC);
+  int wpm = map(clampedPot, 0, POT_MAX_ADC, MIN_WPM, MAX_WPM);
+
+  static int lastReportedPot = -999;
+  if (abs(potVal - lastReportedPot) > 8) {
+    lastReportedPot = potVal;
+    Serial.print("[Speed] ADC A7: ");
+    Serial.print(potVal);
+    Serial.print(" -> ");
+    Serial.print(wpm);
+    Serial.println(" WPM");
+  }
+
   return 1200 / wpm;
 }
 
