@@ -16,11 +16,15 @@ const int PIN_AUDIO = 4;
 const int PIN_LED   = LED_BUILTIN;
 const int PIN_SPEED = A7;
 
-const int SIDETONE_FREQ = 700;
+const int SIDETONE_FREQ   = 700;
+const int SPEED_PIP_FREQ   = 1000; // Hz for milestone beep
+const int SPEED_PIP_MS     = 12;   // Click duration (ms)
+const int SPEED_PIP_GAP_MS = 25;   // Silence gap between double clicks (ms)
 
-const int MIN_WPM = 6;
+const int MIN_WPM = 5;
 const int MAX_WPM = 35;
-const int POT_MAX_ADC = 675; // Expected ADC max when pot is powered by 3.3V (3.3V / 5.0V * 1023)
+const int POT_MIN_ADC = 10;   // ADC 0-10 maps to 5 WPM
+const int POT_MAX_ADC = 850;  // ADC 850+ maps to 35 WPM
 
 // Debounce / Lockout timing
 const unsigned long LOCKOUT_MS = 8;
@@ -78,10 +82,92 @@ char decodeMorse(const String& code) {
   return '?'; // Unrecognized pattern
 }
 
+// Non-blocking speed pip generator
+int pipBeepsRemaining = 0;
+unsigned long pipNextActionTime = 0;
+bool pipToneIsOn = false;
+
+void triggerPip(bool isDouble) {
+  if (state != IDLE) return;
+  tone(PIN_AUDIO, SPEED_PIP_FREQ);
+  pipToneIsOn = true;
+  pipNextActionTime = millis() + SPEED_PIP_MS;
+  pipBeepsRemaining = isDouble ? 1 : 0;
+}
+
+void updatePip() {
+  if (pipNextActionTime == 0) return;
+  if (state != IDLE) {
+    pipNextActionTime = 0;
+    pipBeepsRemaining = 0;
+    pipToneIsOn = false;
+    return;
+  }
+
+  unsigned long now = millis();
+  if (now >= pipNextActionTime) {
+    if (pipToneIsOn) {
+      noTone(PIN_AUDIO);
+      pipToneIsOn = false;
+      if (pipBeepsRemaining > 0) {
+        pipNextActionTime = now + SPEED_PIP_GAP_MS;
+      } else {
+        pipNextActionTime = 0;
+      }
+    } else {
+      if (pipBeepsRemaining > 0) {
+        tone(PIN_AUDIO, SPEED_PIP_FREQ);
+        pipToneIsOn = true;
+        pipNextActionTime = now + SPEED_PIP_MS;
+        pipBeepsRemaining--;
+      } else {
+        pipNextActionTime = 0;
+      }
+    }
+  }
+}
+
+void checkSpeedPip(int currentWpm) {
+  static int lastWpm = -1;
+  static int lastBeepedMilestone = -1;
+
+  if (lastWpm == -1) {
+    lastWpm = currentWpm;
+    if (currentWpm % 5 == 0) {
+      lastBeepedMilestone = currentWpm;
+    }
+    return;
+  }
+
+  if (currentWpm != lastWpm) {
+    int low = min(lastWpm, currentWpm);
+    int high = max(lastWpm, currentWpm);
+
+    for (int m = 5; m <= MAX_WPM; m += 5) {
+      if (m >= low && m <= high) {
+        if (m != lastBeepedMilestone) {
+          bool isDouble = (m % 10 == 0);
+          triggerPip(isDouble);
+          lastBeepedMilestone = m;
+          break;
+        }
+      }
+    }
+
+    if (lastBeepedMilestone != -1 && abs(currentWpm - lastBeepedMilestone) >= 2) {
+      lastBeepedMilestone = -1;
+    }
+
+    lastWpm = currentWpm;
+  }
+}
+
 int getDitLength() {
   int potVal = analogRead(PIN_SPEED);
-  int clampedPot = constrain(potVal, 0, POT_MAX_ADC);
-  int wpm = map(clampedPot, 0, POT_MAX_ADC, MIN_WPM, MAX_WPM);
+  int clampedPot = constrain(potVal, POT_MIN_ADC, POT_MAX_ADC);
+  int wpm = map(clampedPot, POT_MIN_ADC, POT_MAX_ADC, MIN_WPM, MAX_WPM);
+
+  checkSpeedPip(wpm);
 
   static int lastReportedPot = -999;
   if (abs(potVal - lastReportedPot) > 8) {
@@ -138,6 +224,7 @@ void loop() {
   unsigned long now = millis();
 
   updatePaddles();
+  updatePip();
 
   // Mode B Latch Rules
   if (state == SEND_ELEMENT) {
