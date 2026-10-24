@@ -142,3 +142,9 @@ monitor_speed = 115200
 2. Select **Tools > Board > Arduino AVR Boards > Arduino Nano**.
 3. Select **Tools > Processor > ATmega328P** (or *ATmega328P (Old Bootloader)* depending on your clone).
 4. Select the corresponding serial port and click **Upload**.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE) — you are free to use, modify, and distribute this design and code for any purpose.
