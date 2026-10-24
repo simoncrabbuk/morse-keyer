@@ -1,4 +1,6 @@
-# Arduino Nano Iambic CW Practice Keyer & Serial Decoder (v1)
+# Arduino Nano Iambic CW Practice Keyer (v1)
+
+![Morse Practice Oscillator](images/Morse%20Practise%20Oscillator.jpeg)
 
 A compact, standalone Morse code practice keyer and sidetone oscillator housed in a custom 3D-printed benchtop enclosure. The firmware implements Curtis Iambic Mode B squeeze keying, paddle debounce lockout, real-time speed milestone audio cues, and an integrated USB serial text decoder.
 
@@ -60,6 +62,15 @@ Arduino D4 ────[  Pot Wiper   ]────||────(+) Merry DTR22
 | **Tip** | D2 | Dit contact |
 | **Ring** | D3 | Dah contact |
 | **Sleeve** | GND | Common paddle frame ground |
+
+---
+
+### Prototype Construction ("The Ugly Circuit")
+
+![The Ugly Circuit](images/The%20Ugly%20Circuit.jpeg)
+
+> [!NOTE]
+> **A quick apology for the wiring aesthetics:** This is very much a rough-and-ready prototype build in classic "ugly construction" fashion — complete with clumpy point-to-point soldering, flying hookup wires, and generous blobs of hot glue anchoring components inside the 3D-printed enclosure. It definitely won't win any electronics beauty pageants under the hood, but it's rugged, reliable on the bench, and easy to tweak!
 
 ---
 
