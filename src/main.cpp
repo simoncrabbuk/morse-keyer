@@ -33,6 +33,11 @@ unsigned long dahLastChange = 0;
 bool ditStable = false;
 bool dahStable = false;
 
+bool straightKeyMode = false;
+bool straightToneActive = false;
+const unsigned long STRAIGHT_HOLD_MS = 25; // Release hold-off to bridge mid-press contact bounce
+unsigned long lastStraightPressTime = 0;
+
 enum KeyerState { IDLE, SEND_ELEMENT, PAUSE_ELEMENT };
 KeyerState state = IDLE;
 
@@ -209,19 +214,55 @@ void updatePaddles() {
 }
 
 void setup() {
-  Serial.begin(115200);
   pinMode(PIN_DIT, INPUT_PULLUP);
   pinMode(PIN_DAH, INPUT_PULLUP);
   pinMode(PIN_AUDIO, OUTPUT);
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
 
-  Serial.println("\n--- Iambic Keyer Ready ---");
+  delay(20); // Let internal pull-ups settle on power-up
+
+  // Single check at boot: LOW means Ring is grounded (mono plug OR Dah paddle held)
+  straightKeyMode = (digitalRead(PIN_DAH) == LOW);
+
+  if (straightKeyMode) {
+    // 1-second long Dah (1000 ms)
+    toneOn();
+    delay(1000);
+    toneOff();
+  } else {
+    Serial.begin(115200);
+    // 1-second Dit-Dah: 200 ms Dit + 200 ms Gap + 600 ms Dah = 1000 ms
+    toneOn();
+    delay(200);
+    toneOff();
+    delay(200);
+    toneOn();
+    delay(600);
+    toneOff();
+
+    Serial.println("\n--- Iambic Keyer Ready ---");
+  }
 }
 
 void loop() {
-  int ditLen = getDitLength();
   unsigned long now = millis();
+
+  if (straightKeyMode) {
+    if (digitalRead(PIN_DIT) == LOW) {
+      lastStraightPressTime = now;
+      if (!straightToneActive) {
+        toneOn();
+        straightToneActive = true;
+      }
+    } else if (straightToneActive && (now - lastStraightPressTime >= STRAIGHT_HOLD_MS)) {
+      toneOff();
+      straightToneActive = false;
+    }
+    return;
+  }
+
+  int ditLen = getDitLength();
 
   updatePaddles();
   updatePip();

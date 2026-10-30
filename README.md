@@ -2,18 +2,20 @@
 
 ![Morse Practice Oscillator](images/Morse%20Practise%20Oscillator.jpeg)
 
-A compact, standalone Morse code practice keyer and sidetone oscillator housed in a custom 3D-printed benchtop enclosure. The firmware implements Curtis Iambic Mode B squeeze keying, paddle debounce lockout, real-time speed milestone audio cues, and an integrated USB serial text decoder.
+A compact, standalone Morse code practice keyer and sidetone oscillator housed in a custom 3D-printed benchtop enclosure. The firmware supports both **Dual-Paddle Iambic Mode B** squeeze keying and **Straight Key Mode** (auto-detected at power-on), with paddle debounce, real-time speed milestone audio cues, and an integrated USB serial text decoder.
 
 ---
 
 ## Features
 
-* **Curtis Mode B Squeeze Keying:** Automatic dot/dash insertion with mid-element latching and pause-state insertion logic.
-* **Speed Range (5 to 35 WPM):** Live analog speed potentiometer mapped to standard PARIS timing ($t_{\text{dit}} = \frac{1200}{\text{WPM}}\text{ ms}$).
+* **Dual-Paddle & Straight Key Modes (Boot Auto-Detect):** Automatically boots into **Straight Key Mode** if the Ring contact (`D3`) is grounded at startup (either by plugging in a mono TS straight-key plug or by holding down the Dah paddle during power-on). Otherwise, boots into **Dual-Paddle Iambic Mode B**.
+* **1-Second Audible Boot Mode Indicator:** Announces the active mode on startup with a 1-second 700 Hz sequence — **Dit-Dah (`.-`)** for Dual Key mode (200 ms dit, 200 ms gap, 600 ms dah) or a single continuous **Dah (`-`)** (1000 ms) for Straight Key mode.
+* **Curtis Mode B Squeeze Keying:** Automatic dot/dash insertion with mid-element latching and pause-state insertion logic in Dual Key mode.
+* **Speed Range (5 to 35 WPM):** Live analog speed potentiometer mapped to standard PARIS timing ($t_{\text{dit}} = \frac{1200}{\text{WPM}}\text{ ms}$) in Dual Key mode.
 * **Audible Speed Milestone Pips:** Emits non-blocking audio clicks when crossing key speed boundaries (single 1000 Hz click every 5 WPM, double click every 10 WPM).
 * **Direct High-Impedance Audio Drive:** Drives a Merry DTR220H high-impedance transducer ($136\ \Omega$) through a passive $1\text{k}\Omega$ rheostat and a series $4.7\ \mu\text{F}$ DC-blocking capacitor directly from the ATmega328P output pin without needing an active transistor stage.
-* **Built-in Serial Morse Decoder:** Decodes incoming Morse characters and words live over USB serial (115200 baud) using 3-dit character and 7-dit word spacing logic.
-* **Hardware Debounce:** Time-based 8 ms transition lockout on paddle inputs to eliminate phantom elements caused by mechanical paddle contact bounce.
+* **Built-in Serial Morse Decoder:** Decodes incoming Morse characters and words live over USB serial (115200 baud) using 3-dit character and 7-dit word spacing logic (disabled in Straight Key mode).
+* **Adaptive Contact Debounce:** Uses an 8 ms transition lockout in Dual Key mode and an instant-attack, 25 ms release hold-off filter in Straight Key mode to bridge mid-press contact bounce on light 3D-printed paddles.
 * **Rheostat Volume Control:** Series variable resistance volume adjustment without a ground shunt.
 
 ---
@@ -59,9 +61,12 @@ Arduino D4 ────[  Pot Wiper   ]────||────(+) Merry DTR22
 
 | Jack Contact | Nano Pin | Typical Connection |
 | --- | --- | --- |
-| **Tip** | D2 | Dit contact |
-| **Ring** | D3 | Dah contact |
-| **Sleeve** | GND | Common paddle frame ground |
+| **Tip** | D2 | Dit contact (Dual Key) / Key contact (Straight Key) |
+| **Ring** | D3 | Dah contact (Dual Key) / Grounded at boot to select Straight Key Mode |
+| **Sleeve** | GND | Common paddle / key frame ground |
+
+> [!TIP]
+> **Using a Dual Paddle as a Straight Key:** Hold down the **Dah** paddle (`D3` / Ring) while powering on the unit. You will hear a 1-second continuous **Dah** tone confirming Straight Key mode; you can then release the Dah paddle and use the **Dit** paddle (`D2` / Tip) as a straight key.
 
 ---
 
